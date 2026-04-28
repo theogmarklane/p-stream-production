@@ -3,6 +3,24 @@ import { type SubtitleData, searchSubtitles } from "wyzie-lib";
 
 import { CaptionListItem } from "@/stores/player/slices/source";
 
+function getErrorStatus(error: unknown): number | null {
+  if (!error || typeof error !== "object") return null;
+
+  const typedError = error as {
+    status?: number;
+    response?: { status?: number };
+    message?: string;
+  };
+
+  return (
+    typedError.response?.status ??
+    typedError.status ??
+    (typedError.message?.match(/status:\s*(\d{3})/)?.[1]
+      ? Number(typedError.message.match(/status:\s*(\d{3})/)?.[1])
+      : null)
+  );
+}
+
 export async function scrapeWyzieCaptions(
   tmdbId: string | number,
   imdbId: string,
@@ -49,6 +67,11 @@ export async function scrapeWyzieCaptions(
 
     return wyzieCaptions;
   } catch (error) {
+    const status = getErrorStatus(error);
+    if (status === 401 || status === 404) {
+      return [];
+    }
+
     console.error("Error fetching Wyzie subtitles:", error);
     return [];
   }
