@@ -75,6 +75,14 @@ function hlsLevelsToQualities(levels: Level[]): SourceQuality[] {
     .filter((v): v is SourceQuality => !!v);
 }
 
+function getHostnameFromUrl(url: string, baseUrl?: string): string | null {
+  try {
+    return new URL(url, baseUrl).hostname;
+  } catch {
+    return null;
+  }
+}
+
 // Sort levels by quality (height) to ensure we can select the best one
 function sortLevelsByQuality(levels: Level[]): Level[] {
   return [...levels].sort((a, b) => (b.height || 0) - (a.height || 0));
@@ -273,9 +281,9 @@ export function makeVideoElementDisplayInterface(): DisplayInterface {
 
           if (isExtensionActiveCached()) {
             hls.on(Hls.Events.LEVEL_LOADED, async (_, data) => {
-              const chunkUrlsDomains = data.details.fragments.map(
-                (v) => new URL(v.url).hostname,
-              );
+              const chunkUrlsDomains = data.details.fragments
+                .map((v) => getHostnameFromUrl(v.url, hls?.url ?? src.url))
+                .filter((v): v is string => !!v);
               const chunkUrls = [...new Set(chunkUrlsDomains)];
 
               await setDomainRule({
@@ -288,9 +296,9 @@ export function makeVideoElementDisplayInterface(): DisplayInterface {
               });
             });
             hls.on(Hls.Events.AUDIO_TRACK_LOADED, async (_, data) => {
-              const chunkUrlsDomains = data.details.fragments.map(
-                (v) => new URL(v.url).hostname,
-              );
+              const chunkUrlsDomains = data.details.fragments
+                .map((v) => getHostnameFromUrl(v.url, hls?.url ?? src.url))
+                .filter((v): v is string => !!v);
               const chunkUrls = [...new Set(chunkUrlsDomains)];
 
               await setDomainRule({
